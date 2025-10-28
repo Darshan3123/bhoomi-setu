@@ -7,6 +7,328 @@ import { toast } from "react-toastify";
 import { ethers } from "ethers";
 import Link from "next/link";
 
+// Transaction Details Component
+function TransactionDetails({ transactionHash, isOpen, onClose }) {
+  const [transactionData, setTransactionData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (isOpen && transactionHash) {
+      fetchTransactionDetails();
+    }
+  }, [isOpen, transactionHash]);
+
+  const fetchTransactionDetails = async () => {
+    if (!transactionHash) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Initialize provider (you may need to adjust this based on your setup)
+      const provider = new ethers.JsonRpcProvider(
+        process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:8545"
+      );
+
+      // Fetch transaction receipt
+      const receipt = await provider.getTransactionReceipt(transactionHash);
+      if (!receipt) {
+        throw new Error("Transaction not found");
+      }
+
+      // Fetch transaction details
+      const transaction = await provider.getTransaction(transactionHash);
+      
+      // Fetch block details
+      const block = await provider.getBlock(receipt.blockNumber);
+      
+      // Get current block number
+      const currentBlockNumber = await provider.getBlockNumber();
+      
+      // Calculate confirmations
+      const confirmations = currentBlockNumber - receipt.blockNumber;
+
+      // Get gas price
+      const gasPrice = await provider.getFeeData();
+
+      // Get balance of from address
+      const fromBalance = await provider.getBalance(transaction.from);
+      
+      // Get balance of to address (if exists)
+      let toBalance = "0";
+      if (transaction.to) {
+        toBalance = await provider.getBalance(transaction.to);
+      }
+
+      // Get owner information (simplified - you may want to fetch from your API)
+      const ownerInfo = {
+        currentOwner: transaction.to || "Contract",
+        previousOwner: transaction.from,
+        ownershipTransferred: transaction.value !== "0",
+      };
+
+      setTransactionData({
+        hash: transactionHash,
+        from: transaction.from,
+        to: transaction.to,
+        value: ethers.formatEther(transaction.value),
+        blockNumber: receipt.blockNumber,
+        blockHash: receipt.blockHash,
+        transactionIndex: receipt.transactionIndex,
+        confirmations,
+        status: receipt.status === 1 ? "Success" : "Failed",
+        timestamp: new Date(block.timestamp * 1000).toISOString(),
+        fromBalance: ethers.formatEther(fromBalance),
+        toBalance: ethers.formatEther(toBalance),
+        nonce: transaction.nonce,
+        data: transaction.data,
+        logs: receipt.logs,
+        ownerInfo,
+      });
+    } catch (err) {
+      console.error("Error fetching transaction details:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900">Transaction Details</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner />
+              <span className="ml-3 text-gray-600">Fetching transaction details...</span>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Transaction</h3>
+              <p className="text-sm text-gray-500 mb-4">{error}</p>
+              <button
+                onClick={fetchTransactionDetails}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : transactionData ? (
+            <div className="space-y-6">
+              {/* Transaction Status */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Transaction Status</h3>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    transactionData.status === "Success" 
+                      ? "bg-green-100 text-green-800" 
+                      : "bg-red-100 text-red-800"
+                  }`}>
+                    {transactionData.status === "Success" ? "✅" : "❌"} {transactionData.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Transaction Info</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hash</label>
+                    <div className="bg-gray-50 p-3 rounded-lg font-mono text-sm break-all">
+                      {transactionData.hash}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Block Number</label>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      #{transactionData.blockNumber} ({transactionData.confirmations} confirmations)
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Timestamp</label>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      {new Date(transactionData.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nonce</label>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      {transactionData.nonce}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Owner Information</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Previous Owner</label>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <div className="font-mono text-sm break-all mb-2">
+                        {transactionData.ownerInfo.previousOwner}
+                      </div>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Balance: {parseFloat(transactionData.fromBalance).toFixed(4)} ETH
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Owner</label>
+                    <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                      <div className="font-mono text-sm break-all mb-2">
+                        {transactionData.ownerInfo.currentOwner}
+                      </div>
+                      {transactionData.to && (
+                        <div className="flex items-center text-xs text-green-700">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          Balance: {parseFloat(transactionData.toBalance).toFixed(4)} ETH
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Transfer Value</label>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <span className="text-lg font-semibold">{transactionData.value} ETH</span>
+                      {transactionData.ownerInfo.ownershipTransferred && (
+                        <div className="text-xs text-green-600 mt-1 flex items-center">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Ownership transferred with payment
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ownership Transfer Status */}
+              <div className="bg-indigo-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Ownership Transfer Status</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Transfer Type</label>
+                    <div className="bg-white p-3 rounded-lg">
+                      {transactionData.ownerInfo.ownershipTransferred ? (
+                        <span className="inline-flex items-center text-green-700">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                          Paid Transfer
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-blue-700">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Contract Interaction
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirmations</label>
+                    <div className="bg-white p-3 rounded-lg">
+                      <span className="font-semibold">{transactionData.confirmations}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {transactionData.confirmations >= 12 ? "✅ Confirmed" : "⏳ Pending"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Block Information */}
+              <div className="bg-purple-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Block Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Block Hash</label>
+                    <div className="bg-white p-3 rounded-lg font-mono text-sm break-all">
+                      {transactionData.blockHash}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Transaction Index</label>
+                    <div className="bg-white p-3 rounded-lg">
+                      {transactionData.transactionIndex}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transaction Data */}
+              {transactionData.data && transactionData.data !== "0x" && (
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Input Data</h3>
+                  <div className="bg-white p-3 rounded-lg font-mono text-sm break-all max-h-32 overflow-y-auto">
+                    {transactionData.data}
+                  </div>
+                </div>
+              )}
+
+              {/* Event Logs */}
+              {transactionData.logs && transactionData.logs.length > 0 && (
+                <div className="bg-green-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Logs ({transactionData.logs.length})</h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {transactionData.logs.map((log, index) => (
+                      <div key={index} className="bg-white p-3 rounded-lg">
+                        <div className="text-sm">
+                          <div className="font-medium">Log #{index}</div>
+                          <div className="text-gray-600 font-mono text-xs break-all">
+                            Address: {log.address}
+                          </div>
+                          <div className="text-gray-600 font-mono text-xs">
+                            Topics: {log.topics.length}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Verification Timeline Component
 function VerificationTimeline({ notifications }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -177,6 +499,8 @@ export default function UserProperties() {
     sold: 0,
     totalValue: "0",
   });
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -352,6 +676,21 @@ export default function UserProperties() {
       Industrial: { icon: "🏭", color: "bg-orange-100 text-orange-600" },
     };
     return icons[type] || { icon: "🏠", color: "bg-gray-100 text-gray-600" };
+  };
+
+  const handleViewTransaction = (transactionHash) => {
+    setSelectedTransaction(transactionHash);
+    setShowTransactionModal(true);
+  };
+
+  const handleListForSale = async (property) => {
+    // Implementation for listing property for sale
+    toast.info("List for sale functionality to be implemented");
+  };
+
+  const handleUnlistProperty = async (property) => {
+    // Implementation for unlisting property
+    toast.info("Unlist property functionality to be implemented");
   };
 
   if (loading || !isAuthenticated) {
@@ -738,6 +1077,35 @@ export default function UserProperties() {
                               </div>
                             </div>
 
+                            {/* Transaction Hash Display */}
+                            {property.transactionHash && (
+                              <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center mb-2">
+                                      <svg className="w-4 h-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.102m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                      </svg>
+                                      <span className="text-sm font-medium text-indigo-900">Blockchain Transaction</span>
+                                    </div>
+                                    <div className="font-mono text-xs text-indigo-700 break-all">
+                                      {property.transactionHash}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleViewTransaction(property.transactionHash)}
+                                    className="ml-3 inline-flex items-center px-3 py-1.5 border border-indigo-300 text-xs font-medium rounded-lg text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                                  >
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    View Details
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Documents Status */}
                             <div className="mt-4 flex flex-wrap gap-2">
                               {property.hasDocuments?.saleDeed && (
@@ -860,6 +1228,26 @@ export default function UserProperties() {
                                         final approval.
                                       </p>
                                     )}
+                                    
+                                    {/* Show transaction hash for verification properties */}
+                                    {property.transactionHash && (
+                                      <div className="mt-3 pt-2 border-t border-blue-200">
+                                        <p className="text-blue-800 text-xs font-medium mb-1">
+                                          Verification Transaction:
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                          <code className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded break-all">
+                                            {property.transactionHash.slice(0, 20)}...{property.transactionHash.slice(-8)}
+                                          </code>
+                                          <button
+                                            onClick={() => handleViewTransaction(property.transactionHash)}
+                                            className="text-xs text-blue-600 hover:text-blue-800 font-medium ml-2"
+                                          >
+                                            View
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -879,6 +1267,35 @@ export default function UserProperties() {
 
                         {/* Actions */}
                         <div className="flex-shrink-0 flex flex-col space-y-2 ml-4">
+                          {/* View Transaction Button for properties with transaction hash */}
+                          {property.transactionHash && (
+                            <button
+                              onClick={() => handleViewTransaction(property.transactionHash)}
+                              className="inline-flex items-center px-3 py-2 border border-indigo-300 text-sm font-medium rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                            >
+                              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              Transaction Details
+                            </button>
+                          )}
+
+                          {/* Demo button to simulate transaction hash (for testing) */}
+                          {!property.transactionHash && property.source === "approved" && (
+                            <button
+                              onClick={() => {
+                                // Simulate adding a transaction hash for demo purposes
+                                const demoHash = "0x9cb9c21bf4db551b1545334ad018ab69da19fe9abaff290be7af0ad13bfa02cb";
+                                handleViewTransaction(demoHash);
+                              }}
+                              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
+                            >
+                              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.102m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                              </svg>
+                              View Demo Transaction
+                            </button>
+                          )}
                           {/* Show "List for Sale" for approved properties not for sale */}
                           {property.source === "approved" &&
                             !property.forSale &&
@@ -1051,6 +1468,16 @@ export default function UserProperties() {
           </div>
         </div>
       </div>
+
+      {/* Transaction Details Modal */}
+      <TransactionDetails
+        transactionHash={selectedTransaction}
+        isOpen={showTransactionModal}
+        onClose={() => {
+          setShowTransactionModal(false);
+          setSelectedTransaction(null);
+        }}
+      />
     </Layout>
   );
 }
