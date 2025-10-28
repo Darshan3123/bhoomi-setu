@@ -32,10 +32,11 @@ The implementation uses the following Ethereum RPC methods:
 - Transaction nonce
 
 #### Owner Information
-- Previous owner address with current balance
-- Current owner address with current balance
-- Transfer value in ETH
-- Ownership transfer status indicators
+- **Previous Owner**: Name, email, phone, role, and wallet address with current balance
+- **Current Owner**: Name, email, phone, role, and wallet address with current balance  
+- **Transfer Value**: ETH amount transferred
+- **User Profiles**: Fetched from database using wallet addresses
+- **Visual Indicators**: Profile pictures, verification badges, role labels
 
 #### Ownership Transfer Status
 - Transfer type (Paid Transfer vs Contract Interaction)
@@ -118,11 +119,17 @@ const fromBalance = await provider.getBalance(transaction.from);
 
 ## Key Features Added
 
+### Wallet Name Resolution
+- **API Integration**: Fetches user profiles from database using wallet addresses
+- **User Information**: Displays names, emails, phone numbers, and roles
+- **Fallback Handling**: Shows "Unknown User" when wallet not found in database
+- **Privacy Conscious**: Only shows publicly available profile information
+
 ### Owner Information Display
-- **Previous Owner**: Shows the sender address with current balance
-- **Current Owner**: Highlights the recipient address with current balance
-- **Transfer Value**: Displays the ETH amount transferred
-- **Visual Indicators**: Green highlighting for current owner, icons for balances
+- **Previous Owner**: Shows user name, contact info, role, and wallet address with balance
+- **Current Owner**: Highlights recipient with full profile information and balance
+- **Transfer Value**: Displays the ETH amount transferred with ownership indicators
+- **Visual Enhancements**: Profile avatars, verification badges, role labels, contact icons
 
 ### Ownership Transfer Status
 - **Transfer Type Detection**: Automatically identifies paid transfers vs contract interactions
@@ -134,14 +141,45 @@ const fromBalance = await provider.getBalance(transaction.from);
 - Focus on ownership and transfer information relevant to property management
 - Cleaner, more user-friendly display
 
+## API Integration
+
+### Wallet Information Endpoint
+```javascript
+GET /api/auth/users/by-address/:address
+```
+
+**Response Format:**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "user_id",
+    "walletAddress": "0x...",
+    "role": "user|admin|inspector",
+    "profile": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": "+1234567890"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+### Error Handling
+- **404**: User not found for wallet address
+- **500**: Server error during lookup
+- **Graceful Fallback**: Shows address only when API fails
+
 ## Future Enhancements
-1. Integration with property ownership database
-2. Owner name resolution from addresses
+1. ✅ ~~Owner name resolution from addresses~~ (Implemented)
+2. KYC verification status display
 3. Transaction history tracking
 4. Transfer notifications
 5. Export ownership details to PDF
 6. Integration with block explorers
 7. Multi-network support
+8. Cached user information for performance
 
 ## Testing
 1. Start local blockchain node on port 8545

@@ -18,11 +18,12 @@
 **Purpose**: Store user accounts, profiles, and KYC information
 
 #### Schema Structure
+
 ```typescript
 interface IUser {
   _id: ObjectId;
   walletAddress: string; // Ethereum wallet address (0x format)
-  role: 'user' | 'admin' | 'inspector';
+  role: "user" | "admin" | "inspector";
   profile: {
     name?: string;
     email?: string;
@@ -42,6 +43,7 @@ interface IUser {
 ```
 
 #### Validation Rules
+
 - **walletAddress**: Required, unique, lowercase, Ethereum format (0x + 40 hex chars)
 - **role**: Enum ['user', 'admin', 'inspector'], default: 'user'
 - **email**: Unique, lowercase, email format validation
@@ -51,12 +53,14 @@ interface IUser {
 - **IPFS hashes**: Qm format (44 characters)
 
 #### Indexes
+
 - `walletAddress` (unique)
 - `role`
 - `profile.email`
 
 #### Methods
-- `toJSON()`: Clean JSON output (removes __v)
+
+- `toJSON()`: Clean JSON output (removes \_\_v)
 
 ---
 
@@ -65,20 +69,21 @@ interface IUser {
 **Purpose**: Store registered properties with blockchain integration
 
 #### Schema Structure
+
 ```typescript
 interface IProperty {
   _id: ObjectId;
   surveyId: string; // Unique property identifier
   location: string;
-  propertyType: 'Agricultural' | 'Residential' | 'Commercial' | 'Industrial';
+  propertyType: "Agricultural" | "Residential" | "Commercial" | "Industrial";
   area: number;
-  areaUnit: 'sq ft' | 'sq yard' | 'acre';
+  areaUnit: "sq ft" | "sq yard" | "acre";
   priceInWei: string; // Blockchain price in Wei
   priceInINR: number;
   owner: ObjectId; // Reference to User
   ownerAddress: string; // Ethereum address
   forSale: boolean;
-  status: 'active' | 'sold' | 'transferred';
+  status: "active" | "sold" | "transferred";
   documentHashes: string[]; // Array of IPFS hashes
   hasDocuments: {
     saleDeed: boolean;
@@ -94,6 +99,7 @@ interface IProperty {
 ```
 
 #### Validation Rules
+
 - **surveyId**: Required, unique, trimmed
 - **area**: Required, minimum 0
 - **priceInWei**: Required string
@@ -102,6 +108,7 @@ interface IProperty {
 - **status**: Default 'active'
 
 #### Indexes
+
 - `surveyId` (unique)
 - `owner`
 - `propertyType, forSale` (compound index)
@@ -110,14 +117,17 @@ interface IProperty {
 - `createdAt` (descending)
 
 #### Virtual Fields
+
 - `formattedPrice`: Converts Wei to Ether format using ethers.js
 
 #### Static Methods
+
 - `findForSale()`: Returns properties available for sale
 - `findByOwner(ownerId)`: Returns properties by specific owner
 - `searchProperties(query)`: Advanced property search with filters
 
 #### Pre-save Middleware
+
 - Automatically updates `hasDocuments` based on `documentHashes` array length
 
 ---
@@ -127,6 +137,7 @@ interface IProperty {
 **Purpose**: Handle property verification workflow and inspector assignments
 
 #### Schema Structure
+
 ```typescript
 interface IPropertyVerification {
   _id: ObjectId;
@@ -134,7 +145,13 @@ interface IPropertyVerification {
   propertyId: string; // Survey ID reference
   ownerAddress: string; // Property owner's wallet
   inspectorAddress?: string; // Assigned inspector's wallet
-  status: 'pending' | 'assigned' | 'inspection_scheduled' | 'inspected' | 'verified' | 'rejected';
+  status:
+    | "pending"
+    | "assigned"
+    | "inspection_scheduled"
+    | "inspected"
+    | "verified"
+    | "rejected";
   propertyDetails: {
     surveyNumber: string;
     location: string;
@@ -153,7 +170,7 @@ interface IPropertyVerification {
   inspectionReport?: {
     ipfsHash: string;
     submittedAt: Date;
-    recommendation: 'approve' | 'reject';
+    recommendation: "approve" | "reject";
     notes?: string;
     gpsLocation?: string;
     visitDate?: string;
@@ -162,7 +179,7 @@ interface IPropertyVerification {
     message: string;
     sentAt: Date;
     recipients: string[]; // Wallet addresses
-    type: 'info' | 'warning' | 'success' | 'error';
+    type: "info" | "warning" | "success" | "error";
   }>;
   rejectionReason?: string;
   createdAt: Date;
@@ -171,6 +188,7 @@ interface IPropertyVerification {
 ```
 
 #### Validation Rules
+
 - **verificationId**: Required, unique
 - **propertyId**: Required
 - **ownerAddress**: Required, lowercase, Ethereum format
@@ -180,6 +198,7 @@ interface IPropertyVerification {
 - **propertyType**: Enum ['Residential', 'Commercial', 'Agricultural', 'Industrial']
 
 #### Indexes
+
 - `verificationId` (unique)
 - `propertyId`
 - `ownerAddress`
@@ -188,6 +207,7 @@ interface IPropertyVerification {
 - `createdAt` (descending)
 
 #### Instance Methods
+
 - `addNotification(message, recipients, type)`: Add notification to array
 - `updateStatus(newStatus, reason?)`: Update verification status with optional reason
 
@@ -198,6 +218,7 @@ interface IPropertyVerification {
 **Purpose**: Handle land transfer cases and inspection workflow
 
 #### Schema Structure
+
 ```typescript
 interface ICase {
   _id: ObjectId;
@@ -206,7 +227,13 @@ interface ICase {
   fromAddress: string; // Current owner's wallet
   toAddress: string; // New owner's wallet
   inspectorAddress?: string; // Assigned inspector's wallet
-  status: 'pending' | 'inspection_scheduled' | 'inspected' | 'approved' | 'rejected' | 'completed';
+  status:
+    | "pending"
+    | "inspection_scheduled"
+    | "inspected"
+    | "approved"
+    | "rejected"
+    | "completed";
   documents: Array<{
     type: string;
     ipfsHash: string; // IPFS hash with Qm format validation
@@ -217,14 +244,14 @@ interface ICase {
   inspectionReport?: {
     ipfsHash: string;
     submittedAt: Date;
-    recommendation: 'approve' | 'reject';
+    recommendation: "approve" | "reject";
     notes?: string;
   };
   notifications: Array<{
     message: string;
     sentAt: Date;
     recipients: string[];
-    type: 'info' | 'warning' | 'success' | 'error';
+    type: "info" | "warning" | "success" | "error";
   }>;
   rejectionReason?: string;
   createdAt: Date;
@@ -233,6 +260,7 @@ interface ICase {
 ```
 
 #### Validation Rules
+
 - **requestId**: Required, unique
 - **landId**: Required
 - **fromAddress**: Required, lowercase, Ethereum format
@@ -243,6 +271,7 @@ interface ICase {
 - **ipfsHash**: Qm format validation (44 characters)
 
 #### Indexes
+
 - `requestId` (unique)
 - `landId`
 - `fromAddress`
@@ -252,6 +281,7 @@ interface ICase {
 - `createdAt` (descending)
 
 #### Instance Methods
+
 - `addNotification(message, recipients, type)`: Add notification
 - `updateStatus(newStatus, reason?)`: Update case status
 
@@ -262,6 +292,7 @@ interface ICase {
 **Purpose**: Store digital land ownership certificates
 
 #### Schema Structure
+
 ```typescript
 interface ICertificate {
   _id: ObjectId;
@@ -283,6 +314,7 @@ interface ICertificate {
 ```
 
 #### Validation Rules
+
 - **landId**: Required, unique
 - **ownerAddress**: Required, lowercase, Ethereum format
 - **certificateHash**: Required, IPFS Qm format (44 characters)
@@ -291,15 +323,18 @@ interface ICertificate {
 - **previousOwner**: Optional, Ethereum format
 
 #### Indexes
+
 - `landId` (unique)
 - `ownerAddress`
 - `blockchainTxHash`
 - `issuedAt` (descending)
 
 #### Instance Methods
+
 - `toJSON()`: Clean JSON output
 
 #### Static Methods
+
 - `findByOwner(ownerAddress)`: Find certificates by owner
 - `findByLand(landId)`: Find certificate for specific land
 
@@ -308,14 +343,18 @@ interface ICertificate {
 ## 🔗 Relationships & Data Flow
 
 ### Primary Relationships
+
 1. **User → Properties**: One-to-Many (owner relationship)
+
    - `Property.owner` references `User._id`
    - `Property.ownerAddress` matches `User.walletAddress`
 
 2. **Property → PropertyVerification**: One-to-One (verification process)
+
    - `PropertyVerification.propertyId` matches `Property.surveyId`
 
 3. **User → Cases**: Many-to-Many relationships
+
    - `Case.fromAddress` (current owner)
    - `Case.toAddress` (new owner)
    - `Case.inspectorAddress` (assigned inspector)
@@ -327,6 +366,7 @@ interface ICertificate {
 ### Workflow Integration
 
 #### Property Registration Flow
+
 1. User creates account → `Users` collection
 2. User registers property → `Properties` collection
 3. System creates verification request → `PropertyVerifications` collection
@@ -334,6 +374,7 @@ interface ICertificate {
 5. Upon approval → `Certificates` collection updated
 
 #### Land Transfer Flow
+
 1. Transfer request created → `Cases` collection
 2. Inspector assigned for verification
 3. Documents uploaded and verified
@@ -345,15 +386,17 @@ interface ICertificate {
 ## 🔧 Technical Specifications
 
 ### Database Configuration
+
 - **Connection**: MongoDB with Mongoose ODM
 - **Environment**: Configurable via `MONGODB_URI` environment variable
 - **Default URI**: `mongodb://localhost:27017/bhoomi-setu`
-- **Connection Features**: 
+- **Connection Features**:
   - Automatic reconnection
   - Error handling
   - Graceful shutdown on SIGINT
 
 ### Validation & Security
+
 - **Schema Validation**: Mongoose schema-level validation
 - **Data Sanitization**: Automatic trimming and case conversion
 - **Pattern Matching**: Regex validation for addresses, emails, phone numbers
@@ -361,7 +404,9 @@ interface ICertificate {
 - **Type Safety**: TypeScript interfaces for all models
 
 ### Performance Optimization
-- **Indexing Strategy**: 
+
+- **Indexing Strategy**:
+
   - Unique indexes on primary identifiers
   - Compound indexes for common query patterns
   - Text search indexes for location-based queries
@@ -374,12 +419,14 @@ interface ICertificate {
   - Aggregation pipeline support
 
 ### Storage Integration
+
 - **Document Storage**: IPFS (InterPlanetary File System)
 - **File Upload**: Multer middleware with IPFS integration
 - **Blockchain Integration**: Ethereum transaction hash storage
 - **Metadata Storage**: JSON objects for flexible additional data
 
 ### Dependencies
+
 ```json
 {
   "mongoose": "^8.0.0",
@@ -394,6 +441,7 @@ interface ICertificate {
 ## 📊 Data Statistics & Usage
 
 ### Current Implementation Status
+
 - **Collections**: 5 active collections
 - **Relationships**: 4 primary relationship patterns
 - **Indexes**: 20+ optimized indexes across collections
@@ -401,6 +449,7 @@ interface ICertificate {
 - **Validation Rules**: 50+ validation constraints
 
 ### Typical Data Volumes
+
 - **Users**: Scalable to thousands of registered users
 - **Properties**: Hundreds to thousands of property records
 - **Verifications**: One-to-one with properties, plus historical records
@@ -408,6 +457,7 @@ interface ICertificate {
 - **Certificates**: One per verified property ownership
 
 ### Query Patterns
+
 - **User Authentication**: By wallet address
 - **Property Search**: By location, type, price range, availability
 - **Verification Tracking**: By status, inspector, date ranges
@@ -419,6 +469,7 @@ interface ICertificate {
 ## 🚀 Future Enhancements
 
 ### Planned Features
+
 - **Audit Trails**: Complete change history tracking
 - **Advanced Search**: Full-text search across all collections
 - **Analytics**: Property market trends and statistics
@@ -426,6 +477,7 @@ interface ICertificate {
 - **Backup Strategy**: Automated backup and recovery procedures
 
 ### Scalability Considerations
+
 - **Sharding**: Horizontal scaling for large datasets
 - **Replication**: Master-slave setup for high availability
 - **Caching**: Redis integration for frequently accessed data
@@ -433,6 +485,6 @@ interface ICertificate {
 
 ---
 
-*Last Updated: October 2025*
-*Version: 1.0.0*
-*Maintained by: Bhoomi Setu Development Team*
+_Last Updated: October 2025_
+_Version: 1.0.0_
+_Maintained by: Bhoomi Setu Development Team_

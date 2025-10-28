@@ -19,6 +19,34 @@ function TransactionDetails({ transactionHash, isOpen, onClose }) {
     }
   }, [isOpen, transactionHash]);
 
+  // Function to fetch wallet owner information from API
+  const fetchWalletInfo = async (walletAddress) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api"}/auth/users/by-address/${walletAddress}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          name: data.user?.profile?.name || null,
+          email: data.user?.profile?.email || null,
+          phone: data.user?.profile?.phone || null,
+          role: data.user?.role || null,
+          verified: false, // KYC info not exposed in this endpoint for privacy
+        };
+      }
+    } catch (error) {
+      console.log("Could not fetch wallet info for", walletAddress);
+    }
+    return null;
+  };
+
   const fetchTransactionDetails = async () => {
     if (!transactionHash) return;
     
@@ -61,10 +89,28 @@ function TransactionDetails({ transactionHash, isOpen, onClose }) {
         toBalance = await provider.getBalance(transaction.to);
       }
 
-      // Get owner information (simplified - you may want to fetch from your API)
+      // Fetch wallet owner information from API
+      const [fromWalletInfo, toWalletInfo] = await Promise.all([
+        fetchWalletInfo(transaction.from),
+        transaction.to ? fetchWalletInfo(transaction.to) : null,
+      ]);
+
+      // Get owner information with names
       const ownerInfo = {
-        currentOwner: transaction.to || "Contract",
-        previousOwner: transaction.from,
+        currentOwner: {
+          address: transaction.to || "Contract",
+          name: toWalletInfo?.name || null,
+          email: toWalletInfo?.email || null,
+          role: toWalletInfo?.role || null,
+          verified: toWalletInfo?.verified || false,
+        },
+        previousOwner: {
+          address: transaction.from,
+          name: fromWalletInfo?.name || null,
+          email: fromWalletInfo?.email || null,
+          role: fromWalletInfo?.role || null,
+          verified: fromWalletInfo?.verified || false,
+        },
         ownershipTransferred: transaction.value !== "0",
       };
 
@@ -189,8 +235,48 @@ function TransactionDetails({ transactionHash, isOpen, onClose }) {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Previous Owner</label>
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="font-mono text-sm break-all mb-2">
-                        {transactionData.ownerInfo.previousOwner}
+                      {transactionData.ownerInfo.previousOwner.name ? (
+                        <div className="mb-3">
+                          <div className="flex items-center mb-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">
+                                {transactionData.ownerInfo.previousOwner.name}
+                                {transactionData.ownerInfo.previousOwner.verified && (
+                                  <svg className="w-4 h-4 text-green-500 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                )}
+                              </div>
+                              {transactionData.ownerInfo.previousOwner.role && (
+                                <div className="text-xs text-gray-500 capitalize">
+                                  {transactionData.ownerInfo.previousOwner.role}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {transactionData.ownerInfo.previousOwner.email && (
+                            <div className="text-xs text-gray-600 mb-1">
+                              📧 {transactionData.ownerInfo.previousOwner.email}
+                            </div>
+                          )}
+                          {transactionData.ownerInfo.previousOwner.phone && (
+                            <div className="text-xs text-gray-600 mb-2">
+                              📱 {transactionData.ownerInfo.previousOwner.phone}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mb-2">
+                          <div className="text-sm text-gray-600 mb-1">Unknown User</div>
+                        </div>
+                      )}
+                      <div className="font-mono text-xs text-gray-500 break-all mb-2">
+                        {transactionData.ownerInfo.previousOwner.address}
                       </div>
                       <div className="flex items-center text-xs text-gray-500">
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,8 +290,50 @@ function TransactionDetails({ transactionHash, isOpen, onClose }) {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Current Owner</label>
                     <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                      <div className="font-mono text-sm break-all mb-2">
-                        {transactionData.ownerInfo.currentOwner}
+                      {transactionData.ownerInfo.currentOwner.name ? (
+                        <div className="mb-3">
+                          <div className="flex items-center mb-2">
+                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-green-900">
+                                {transactionData.ownerInfo.currentOwner.name}
+                                {transactionData.ownerInfo.currentOwner.verified && (
+                                  <svg className="w-4 h-4 text-green-600 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                )}
+                              </div>
+                              {transactionData.ownerInfo.currentOwner.role && (
+                                <div className="text-xs text-green-700 capitalize">
+                                  {transactionData.ownerInfo.currentOwner.role}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {transactionData.ownerInfo.currentOwner.email && (
+                            <div className="text-xs text-green-700 mb-1">
+                              📧 {transactionData.ownerInfo.currentOwner.email}
+                            </div>
+                          )}
+                          {transactionData.ownerInfo.currentOwner.phone && (
+                            <div className="text-xs text-green-700 mb-2">
+                              📱 {transactionData.ownerInfo.currentOwner.phone}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mb-2">
+                          <div className="text-sm text-green-800 mb-1">
+                            {transactionData.ownerInfo.currentOwner.address === "Contract" ? "Smart Contract" : "Unknown User"}
+                          </div>
+                        </div>
+                      )}
+                      <div className="font-mono text-xs text-green-700 break-all mb-2">
+                        {transactionData.ownerInfo.currentOwner.address}
                       </div>
                       {transactionData.to && (
                         <div className="flex items-center text-xs text-green-700">

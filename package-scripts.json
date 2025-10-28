@@ -1,0 +1,50 @@
+{
+  "description": "Add these scripts to your package.json files for easy database management",
+  "backend_package_json_scripts": {
+    "setup-db": "node scripts/setup-database.js",
+    "reset-db": "node scripts/setup-database.js",
+    "clear-db": "node -e \"require('./scripts/setup-database.js').clearDatabase().then(() => process.exit())\"",
+    "create-indexes": "node -e \"require('./scripts/setup-database.js').createIndexes().then(() => process.exit())\"",
+    "dev-with-db": "npm run setup-db && npm run dev"
+  },
+  "root_package_json_scripts": {
+    "setup": "node backend/scripts/setup-database.js",
+    "quick-setup": "node backend/scripts/setup-database.js && echo 'Database ready! Start backend: cd backend && npm run dev' && echo 'Start frontend: cd frontend && npm run dev'",
+    "reset-dev": "node backend/scripts/setup-database.js",
+    "dev-backend": "cd backend && npm run dev",
+    "dev-frontend": "cd frontend && npm run dev"
+  },
+  "usage_examples": [
+    {
+      "command": "npm run setup",
+      "description": "Set up database with sample data"
+    },
+    {
+      "command": "npm run reset-dev", 
+      "description": "Reset database for fresh development"
+    },
+    {
+      "command": "npm run dev-backend",
+      "description": "Start backend server"
+    },
+    {
+      "command": "npm run dev-frontend", 
+      "description": "Start frontend server"
+    }
+  ],
+  "environment_variables": {
+    "MONGODB_URI": "mongodb://localhost:27017/bhoomi-setu",
+    "NODE_ENV": "development"
+  },
+  "sample_wallets": {
+    "admin": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "inspector": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+    "user1": "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
+    "user2": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+    "user3": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65"
+  },
+  "sample_transactions": {
+    "property_transfer": "0x9cb9c21bf4db551b1545334ad018ab69da19fe9abaff290be7af0ad13bfa02cb",
+    "property_verification": "0x89d6ba0b0e109e142e8afdc93490aebec6a2b58747f23d9179e0584c2ea53794"
+  }
+}

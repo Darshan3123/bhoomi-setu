@@ -1,7 +1,9 @@
 import AdminLayout from '../../components/admin/AdminLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ethers } from 'ethers';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function TransfersManagement() {
   const { user } = useAuth();
