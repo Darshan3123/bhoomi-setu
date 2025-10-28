@@ -16,7 +16,7 @@ export default function KYCManagement() {
   });
 
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
 
   useEffect(() => {
     fetchKYCData();

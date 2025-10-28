@@ -13,7 +13,7 @@ export const useAuth = () => {
   return context;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }) => {
       
       // Provide more specific error messages
       if (error.code === 'NETWORK_ERROR' || error.message.includes('fetch')) {
-        toast.error('Cannot connect to server. Please make sure the backend is running on http://localhost:3002');
+        toast.error('Cannot connect to server. Please make sure the backend is running on http://localhost:3003');
       } else if (error.response?.status === 401) {
         // Clear any stale authentication data
         localStorage.removeItem('auth_token');

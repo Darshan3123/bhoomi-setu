@@ -357,12 +357,12 @@ router.post("/generate-message", async (req, res) => {
     }
 
     const timestamp = Date.now();
-    // Use a simpler message format to avoid encoding issues
-    const message = `Bhoomi Setu Authentication\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\nNonce: ${Math.random().toString(36).substring(2)}`;
+    const nonce = Math.random().toString(36).substring(2);
+    // Use a very simple message format that MetaMask handles well
+    const message = `Welcome to Bhoomi Setu!\n\nSign this message to authenticate your wallet.\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\nNonce: ${nonce}`;
     
     console.log("🔍 Generated message for signing:", JSON.stringify(message));
     console.log("🔍 Message length:", message.length);
-    console.log("🔍 Message bytes:", Array.from(new TextEncoder().encode(message)));
 
     res.json({
       message,
@@ -710,6 +710,58 @@ router.get("/admin/dashboard-stats", authenticateToken, async (req, res) => {
   } catch (error) {
     console.error("Admin dashboard stats error:", error);
     res.status(500).json({ error: "Failed to fetch dashboard statistics" });
+  }
+});
+
+/**
+ * GET /api/auth/users/by-address/:address
+ * Get user by wallet address (public route for property transactions)
+ */
+router.get("/users/by-address/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Wallet address is required" 
+      });
+    }
+
+    // Find user by wallet address (case insensitive)
+    const user = await User.findOne({ 
+      walletAddress: address.toLowerCase() 
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    // Return user profile information (excluding sensitive data)
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        walletAddress: user.walletAddress,
+        role: user.role,
+        profile: {
+          name: user.profile?.name || null,
+          email: user.profile?.email || null,
+          phone: user.profile?.phone || null,
+        },
+        createdAt: user.createdAt,
+      }
+    });
+
+  } catch (error) {
+    console.error("Get user by address error:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to fetch user details" 
+    });
   }
 });
 

@@ -22,7 +22,7 @@ export default function ResetUser() {
     setIsResetting(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}/auth/reset-user/${account}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api'}/auth/reset-user/${account}`, {
         method: 'DELETE',
       });
 

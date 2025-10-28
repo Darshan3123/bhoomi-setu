@@ -569,6 +569,89 @@ contract LandRegistry is AccessControl, ReentrancyGuard, Pausable {
         return (landIds, prices);
     }
 
+    // Property tax rate (in basis points, e.g., 200 = 2%)
+    uint256 public propertyTaxRate = 200; // 2% tax
+    address public taxCollector;
+
+    /**
+     * @dev Set property tax rate (admin only)
+     */
+    function setPropertyTaxRate(uint256 _taxRate) external onlyAdmin {
+        require(_taxRate <= 1000, "Tax rate cannot exceed 10%"); // Max 10%
+        propertyTaxRate = _taxRate;
+    }
+
+    /**
+     * @dev Set tax collector address (admin only)
+     */
+    function setTaxCollector(address _taxCollector) external onlyAdmin {
+        require(_taxCollector != address(0), "Invalid tax collector address");
+        taxCollector = _taxCollector;
+    }
+
+    /**
+     * @dev Calculate total cost including taxes
+     */
+    function calculateTotalCost(uint256 landId) external view returns (uint256 basePrice, uint256 taxAmount, uint256 totalCost) {
+        require(landRecords[landId].landId != 0, "Land not found");
+        
+        basePrice = landRecords[landId].priceInWei;
+        taxAmount = (basePrice * propertyTaxRate) / 10000; // Calculate tax
+        totalCost = basePrice + taxAmount;
+        
+        return (basePrice, taxAmount, totalCost);
+    }
+
+    /**
+     * @dev Purchase property directly with ETH (including taxes)
+     */
+    function purchaseProperty(uint256 landId) external payable onlyRegistered whenNotPaused nonReentrant {
+        require(landRecords[landId].landId != 0, "Land not found");
+        require(landRecords[landId].isActive, "Land not active");
+        require(landRecords[landId].status == PropertyStatus.ForSale, "Property not for sale");
+        require(landRecords[landId].currentOwner != msg.sender, "Cannot buy your own property");
+        require(landRecords[landId].priceInWei > 0, "Price not set");
+
+        address previousOwner = landRecords[landId].currentOwner;
+        uint256 basePrice = landRecords[landId].priceInWei;
+        uint256 taxAmount = (basePrice * propertyTaxRate) / 10000;
+        uint256 totalCost = basePrice + taxAmount;
+
+        require(msg.value == totalCost, "Incorrect payment amount (including taxes)");
+
+        // Remove land from current owner
+        _removeLandFromOwner(previousOwner, landId);
+
+        // Transfer ownership
+        landRecords[landId].currentOwner = msg.sender;
+        landRecords[landId].status = PropertyStatus.Sold;
+        landRecords[landId].priceInWei = 0; // Reset price after sale
+        ownerLands[msg.sender].push(landId);
+
+        // Transfer base price to previous owner
+        (bool ownerSuccess, ) = payable(previousOwner).call{value: basePrice}("");
+        require(ownerSuccess, "Payment to owner failed");
+
+        // Transfer tax to tax collector (or contract owner if not set)
+        address taxRecipient = taxCollector != address(0) ? taxCollector : owner();
+        if (taxAmount > 0) {
+            (bool taxSuccess, ) = payable(taxRecipient).call{value: taxAmount}("");
+            require(taxSuccess, "Tax payment failed");
+        }
+
+        emit PropertyPurchased(landId, previousOwner, msg.sender, basePrice, taxAmount, totalCost);
+    }
+
+    // New event for direct purchases
+    event PropertyPurchased(
+        uint256 indexed landId,
+        address indexed previousOwner,
+        address indexed newOwner,
+        uint256 basePrice,
+        uint256 taxAmount,
+        uint256 totalCost
+    );
+
     /**
      * @dev Emergency pause (admin only)
      */

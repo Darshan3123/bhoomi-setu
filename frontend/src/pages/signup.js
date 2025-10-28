@@ -97,7 +97,7 @@ export default function Signup() {
 
     try {
       // Generate message for signing
-      const messageResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}/auth/generate-message`, {
+      const messageResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api'}/auth/generate-message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ export default function Signup() {
       console.log('🔍 Frontend debug - Wallet address:', account);
 
       // Register user with profile data
-      const authResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}/auth/register-with-profile`, {
+      const authResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api'}/auth/register-with-profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

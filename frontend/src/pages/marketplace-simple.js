@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { useAuth } from "@/contexts/AuthContext";
-import { useWeb3 } from "@/contexts/Web3Context";
 import Layout from "@/components/Layout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "react-toastify";
@@ -10,8 +8,6 @@ import Link from "next/link";
 
 export default function Marketplace() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { account } = useWeb3();
 
   const [properties, setProperties] = useState([]);
   const [filteredProperties, setFilteredProperties] = useState([]);
@@ -25,7 +21,6 @@ export default function Marketplace() {
     maxPrice: "",
     location: "",
     sortBy: "newest",
-    showSold: true, // Show sold properties by default
   });
 
   // Pagination
@@ -47,7 +42,7 @@ export default function Marketplace() {
       const response = await fetch(
         `${
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api"
-        }/properties?page=${currentPage}&limit=${propertiesPerPage}`
+        }/properties?forSale=true&page=${currentPage}&limit=${propertiesPerPage}`
       );
 
       const data = await response.json();
@@ -68,39 +63,6 @@ export default function Marketplace() {
 
   const applyFilters = () => {
     let filtered = [...properties];
-
-    // Filter out user's own properties
-    if (user && account) {
-      const beforeCount = filtered.length;
-      filtered = filtered.filter((p) => {
-        // Filter by wallet address (primary check)
-        if (p.ownerAddress && account) {
-          const isOwner = p.ownerAddress.toLowerCase() === account.toLowerCase();
-          if (isOwner) {
-            console.log('🚫 Filtering out user\'s own property:', p.surveyId);
-          }
-          return !isOwner;
-        }
-        // Filter by user ID (secondary check)
-        if (p.owner && user._id) {
-          const isOwner = p.owner === user._id || p.owner._id === user._id;
-          if (isOwner) {
-            console.log('🚫 Filtering out user\'s own property (by ID):', p.surveyId);
-          }
-          return !isOwner;
-        }
-        return true;
-      });
-      const afterCount = filtered.length;
-      if (beforeCount !== afterCount) {
-        console.log(`📊 Filtered out ${beforeCount - afterCount} user-owned properties`);
-      }
-    }
-
-    // Filter by sold status
-    if (!filters.showSold) {
-      filtered = filtered.filter((p) => p.forSale && p.status !== 'transferred');
-    }
 
     // Filter by property type
     if (filters.propertyType) {
@@ -174,7 +136,6 @@ export default function Marketplace() {
       maxPrice: "",
       location: "",
       sortBy: "newest",
-      showSold: true,
     });
   };
 
@@ -213,27 +174,18 @@ export default function Marketplace() {
 
   const handleBuyNow = async (property) => {
     // Check if MetaMask is available
-    if (typeof window !== "undefined" && window.ethereum) {
+    if (typeof window !== 'undefined' && window.ethereum) {
       try {
         // Request account access
         const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
+          method: 'eth_requestAccounts',
         });
-
+        
         if (accounts.length > 0) {
+          const priceInEth = parseFloat(formatPrice(property.priceInWei));
+          toast.success(`MetaMask connected! Property price: ${priceInEth} ETH (+ 2% tax). Full purchase functionality will be implemented next.`);
           console.log("Connected account:", accounts[0]);
           console.log("Property to purchase:", property);
-          console.log("Property ID:", property._id || property.id);
-          console.log("Property has landId:", property.landId);
-          
-          // Check if property has valid data for purchase
-          if (!property.surveyId && !property._id && !property.id) {
-            toast.error(`Invalid property data. This property cannot be purchased.`);
-            return;
-          }
-          
-          // Redirect to payment page using surveyId (preferred) or fallback to _id
-          router.push(`/payment/${property.surveyId || property._id || property.id}`);
         }
       } catch (error) {
         if (error.code === 4001) {
@@ -246,8 +198,6 @@ export default function Marketplace() {
       toast.error("Please install MetaMask to purchase properties");
     }
   };
-
-  // Removed old purchase flow functions - now using dedicated payment page
 
   const propertyTypes = [
     { value: "", label: "All Types" },
@@ -282,14 +232,9 @@ export default function Marketplace() {
                 </p>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-500">
-                  <span>{filteredProperties.length} properties available</span>
-                  {user && account && (
-                    <span className="ml-2 text-xs text-blue-600">
-                      (excluding your properties)
-                    </span>
-                  )}
-                </div>
+                <span className="text-sm text-gray-500">
+                  {filteredProperties.length} properties available
+                </span>
                 <Link
                   href="/add-property"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -317,7 +262,7 @@ export default function Marketplace() {
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Filters Sidebar */}
-            <div className="lg:w-1/5">
+            <div className="lg:w-1/4">
               <div className="bg-white rounded-lg shadow p-6 sticky top-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">
@@ -423,26 +368,12 @@ export default function Marketplace() {
                       ))}
                     </select>
                   </div>
-
-                  {/* Show Sold Properties */}
-                  <div>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="showSold"
-                        checked={filters.showSold}
-                        onChange={(e) => setFilters(prev => ({ ...prev, showSold: e.target.checked }))}
-                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                      />
-                      <span className="ml-2 text-sm text-gray-700">Show sold properties</span>
-                    </label>
-                  </div>
                 </div>
               </div>
             </div>
 
             {/* Properties Grid */}
-            <div className="lg:w-4/5">
+            <div className="lg:w-3/4">
               {isLoading ? (
                 <div className="flex justify-center items-center h-64">
                   <LoadingSpinner />
@@ -479,27 +410,27 @@ export default function Marketplace() {
               ) : filteredProperties.length > 0 ? (
                 <>
                   {/* Properties Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filteredProperties.map((property) => (
                       <div
                         key={property.id}
                         className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
                       >
                         {/* Property Image Placeholder */}
-                        <div className="h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-t-lg flex items-center justify-center">
+                        <div className="h-48 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-t-lg flex items-center justify-center">
                           <div className="text-center">
-                            <div className="text-3xl mb-1">
+                            <div className="text-4xl mb-2">
                               {getPropertyTypeIcon(property.propertyType)}
                             </div>
-                            <span className="text-xs text-gray-600">
+                            <span className="text-sm text-gray-600">
                               {property.propertyType}
                             </span>
                           </div>
                         </div>
 
-                        <div className="p-4">
+                        <div className="p-6">
                           {/* Property Header */}
-                          <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-start justify-between mb-3">
                             <div>
                               <h3 className="text-lg font-semibold text-gray-900 mb-1">
                                 {property.surveyId}
@@ -529,23 +460,13 @@ export default function Marketplace() {
                                   : property.location}
                               </p>
                             </div>
-                            {property.forSale && property.status === 'active' ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                For Sale
-                              </span>
-                            ) : property.status === 'transferred' || !property.forSale ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                Sold
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                Not Available
-                              </span>
-                            )}
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              For Sale
+                            </span>
                           </div>
 
                           {/* Property Details */}
-                          <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                          <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                             <div>
                               <span className="text-gray-500">Area:</span>
                               <span className="ml-1 font-medium">
@@ -561,49 +482,44 @@ export default function Marketplace() {
                           </div>
 
                           {/* Price */}
-                          <div className="mb-3">
-                            <div className="text-xl font-bold text-gray-900">
+                          <div className="mb-4">
+                            <div className="text-2xl font-bold text-gray-900">
                               {formatPrice(property.priceInWei)} ETH
                             </div>
                             {property.priceInINR > 0 && (
-                              <div className="text-xs text-gray-500">
+                              <div className="text-sm text-gray-500">
                                 ≈ ₹{property.priceInINR.toLocaleString()}
                               </div>
                             )}
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-500 mt-1">
                               + 2% property tax
                             </div>
                           </div>
 
                           {/* Owner Info */}
-                          <div className="mb-3 p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">
-                              Owner: <span className="font-mono text-gray-700">{truncateAddress(property.ownerAddress)}</span>
+                          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="text-xs text-gray-500 mb-1">
+                              Owner
+                            </div>
+                            <div className="text-sm font-mono text-gray-700 break-all">
+                              {truncateAddress(property.ownerAddress)}
                             </div>
                           </div>
 
                           {/* Actions */}
-                          <div className="w-full">
+                          <div className="flex space-x-2">
+                            <Link
+                              href={`/property/${property.surveyId}`}
+                              className="flex-1 bg-indigo-600 text-white text-center py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
+                            >
+                              View Details
+                            </Link>
                             <button
                               onClick={() => handleBuyNow(property)}
-                              disabled={
-                                parseFloat(formatPrice(property.priceInWei)) === 0 ||
-                                !property.forSale ||
-                                property.status === 'transferred'
-                              }
-                              className={`w-full py-3 px-4 rounded-md transition-colors text-sm font-medium ${
-                                !property.forSale || property.status === 'transferred'
-                                  ? 'bg-gray-400 text-white cursor-not-allowed'
-                                  : parseFloat(formatPrice(property.priceInWei)) === 0
-                                  ? 'bg-gray-400 text-white cursor-not-allowed'
-                                  : 'bg-green-600 text-white hover:bg-green-700'
-                              }`}
+                              disabled={parseFloat(formatPrice(property.priceInWei)) === 0}
+                              className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                             >
-                              {!property.forSale || property.status === 'transferred'
-                                ? "Sold"
-                                : parseFloat(formatPrice(property.priceInWei)) === 0
-                                ? "Price Not Set"
-                                : "Buy Now"}
+                              {parseFloat(formatPrice(property.priceInWei)) === 0 ? 'Price Not Set' : 'Buy Now'}
                             </button>
                           </div>
                         </div>

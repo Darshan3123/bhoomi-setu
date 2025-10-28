@@ -41,7 +41,7 @@ export default function UserDashboard() {
 
       const response = await fetch(
         `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api"
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api"
         }/properties/my-properties`,
         {
           headers: {
@@ -464,22 +464,28 @@ export default function UserDashboard() {
                       };
 
                       const getStatusBadge = (status, forSale) => {
-                        if (status === "sold") {
+                        if (status === "transferred" || status === "sold") {
                           return (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                               Sold
                             </span>
                           );
-                        } else if (forSale) {
+                        } else if (forSale && status === "active") {
                           return (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               For Sale
                             </span>
                           );
-                        } else {
+                        } else if (status === "active") {
                           return (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              Registered
+                              Owned
+                            </span>
+                          );
+                        } else {
+                          return (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {status || "Unknown"}
                             </span>
                           );
                         }

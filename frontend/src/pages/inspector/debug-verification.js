@@ -178,7 +178,7 @@ export default function DebugVerification() {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Environment</h2>
           <div className="text-sm text-gray-600">
-            <p><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}</p>
+            <p><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api'}</p>
           </div>
         </div>
       </div>

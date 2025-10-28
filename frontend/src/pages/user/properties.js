@@ -191,7 +191,7 @@ export default function UserProperties() {
       setIsLoading(true);
       const response = await fetch(
         `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api"
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api"
         }/properties/my-properties`,
         {
           headers: {
@@ -228,7 +228,7 @@ export default function UserProperties() {
         );
         const forSale = approvedProperties.filter((p) => p.forSale).length;
         const sold = approvedProperties.filter(
-          (p) => p.status === "sold"
+          (p) => p.status === "sold" || p.status === "transferred"
         ).length;
 
         // Calculate total value (only for approved properties)
@@ -313,25 +313,32 @@ export default function UserProperties() {
     }
 
     // Handle approved property statuses (from Property table)
-    if (status === "sold") {
+    if (status === "transferred" || status === "sold") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          <div className="w-1.5 h-1.5 bg-gray-500 rounded-full mr-1.5"></div>
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <div className="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5"></div>
           Sold
         </span>
       );
-    } else if (forSale) {
+    } else if (forSale && status === "active") {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></div>
           For Sale
         </span>
       );
+    } else if (status === "active") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></div>
+          Owned
+        </span>
+      );
     } else {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></div>
-          Approved
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <div className="w-1.5 h-1.5 bg-gray-500 rounded-full mr-1.5"></div>
+          {status || "Unknown"}
         </span>
       );
     }
@@ -872,11 +879,15 @@ export default function UserProperties() {
 
                         {/* Actions */}
                         <div className="flex-shrink-0 flex flex-col space-y-2 ml-4">
-                          {/* Only show "List for Sale" for approved properties */}
+                          {/* Show "List for Sale" for approved properties not for sale */}
                           {property.source === "approved" &&
                             !property.forSale &&
-                            property.status !== "sold" && (
-                              <button className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200">
+                            property.status !== "sold" &&
+                            property.status !== "transferred" && (
+                              <button 
+                                onClick={() => handleListForSale(property)}
+                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
+                              >
                                 <svg
                                   className="w-4 h-4 mr-1.5"
                                   fill="none"
@@ -891,6 +902,31 @@ export default function UserProperties() {
                                   />
                                 </svg>
                                 List for Sale
+                              </button>
+                            )}
+
+                          {/* Show "Unlist" for properties currently for sale */}
+                          {property.source === "approved" &&
+                            property.forSale &&
+                            property.status === "active" && (
+                              <button 
+                                onClick={() => handleUnlistProperty(property)}
+                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
+                              >
+                                <svg
+                                  className="w-4 h-4 mr-1.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                                Unlist Property
                               </button>
                             )}
 
@@ -943,7 +979,7 @@ export default function UserProperties() {
                               </div>
                             )}
 
-                          {property.forSale && (
+                          {/* {property.forSale && (
                             <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200">
                               <svg
                                 className="w-4 h-4 mr-1.5"
@@ -960,7 +996,7 @@ export default function UserProperties() {
                               </svg>
                               Remove from Sale
                             </button>
-                          )}
+                          )} */}
                         </div>
                       </div>
                     </div>

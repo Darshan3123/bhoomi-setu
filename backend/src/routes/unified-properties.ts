@@ -695,6 +695,71 @@ router.post("/update-verification-status", authenticateToken, requireRole(["admi
 });
 
 /**
+ * POST /api/unified-properties/transfer-ownership
+ * Transfer property ownership after successful payment
+ */
+router.post("/transfer-ownership", authenticateToken, async (req: any, res: any) => {
+  try {
+    const { 
+      surveyId, 
+      newOwnerAddress, 
+      transactionHash
+    } = req.body;
+
+    console.log('🔄 Processing property ownership transfer:', {
+      surveyId,
+      newOwnerAddress,
+      transactionHash
+    });
+
+    // Find the property by surveyId
+    const property = await Property.findOne({ surveyId });
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        error: 'Property not found'
+      });
+    }
+
+    // Update property ownership (simplified version)
+    const oldOwnerAddress = property.ownerAddress;
+    property.ownerAddress = newOwnerAddress.toLowerCase();
+    property.status = 'transferred';
+    property.forSale = false;
+    property.blockchainTxHash = transactionHash;
+
+    await property.save();
+
+    console.log('✅ Property ownership transferred:', {
+      surveyId: property.surveyId,
+      from: oldOwnerAddress,
+      to: newOwnerAddress,
+      txHash: transactionHash
+    });
+
+    res.json({
+      success: true,
+      message: 'Property ownership transferred successfully',
+      property: {
+        id: property._id,
+        surveyId: property.surveyId,
+        newOwner: newOwnerAddress,
+        transactionHash
+      }
+    });
+
+  } catch (error) {
+    console.error('Property transfer error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to transfer property ownership',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/unified-properties/:surveyId
  * Get property details by survey ID (includes verification data)
  * NOTE: This route must be LAST to avoid conflicts with specific routes like /my-properties

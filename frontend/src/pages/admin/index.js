@@ -33,7 +33,7 @@ export default function AdminDashboard() {
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
       
       // Fetch users data
       const usersResponse = await fetch(`${API_BASE_URL}/auth/admin/users`, {

@@ -29,7 +29,7 @@ function AdminActions({ property, verification, onInspectorAssigned }) {
       setLoadingInspectors(true);
       const response = await fetch(
         `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api"
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api"
         }/properties/inspectors`
       );
       const data = await response.json();
@@ -425,7 +425,7 @@ export default function PropertyDetails() {
       // Try to fetch from unified properties API first
       const propertyResponse = await fetch(
         `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api"
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api"
         }/properties/${surveyId}`
       );
 
@@ -531,7 +531,7 @@ export default function PropertyDetails() {
       console.log("🔍 Trying regular properties endpoint...");
       const fallbackPropertyResponse = await fetch(
         `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api"
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api"
         }/properties/${surveyId}`
       );
 
@@ -816,10 +816,40 @@ export default function PropertyDetails() {
                       </dd>
                     </div>
                   )}
+                  {property.ownerAddress && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">
+                        Current Owner
+                      </dt>
+                      <dd className="mt-1 text-sm text-gray-900 font-mono bg-gray-50 px-2 py-1 rounded">
+                        {property.ownerAddress.substring(0, 6)}...{property.ownerAddress.substring(property.ownerAddress.length - 4)}
+                      </dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">
+                      Property Status
+                    </dt>
+                    <dd className="mt-1">
+                      {property.status === "transferred" || !property.forSale ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Sold
+                        </span>
+                      ) : property.forSale ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          For Sale
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          Owned
+                        </span>
+                      )}
+                    </dd>
+                  </div>
                   {property.priceInWei && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">
-                        Listed Price
+                        {property.forSale && property.status !== "transferred" ? "Listed Price" : "Last Sale Price"}
                       </dt>
                       <dd className="mt-1 text-sm text-gray-900 font-semibold">
                         {(parseFloat(property.priceInWei) / 1e18).toFixed(4)}{" "}

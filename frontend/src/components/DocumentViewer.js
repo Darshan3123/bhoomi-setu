@@ -13,7 +13,7 @@ export default function DocumentViewer({
   const [error, setError] = useState('');
   const [documentUrl, setDocumentUrl] = useState('');
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
 
   const handleViewDocument = async () => {
     if (!userId && !documentHash) {

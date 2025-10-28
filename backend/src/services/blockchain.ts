@@ -14,11 +14,16 @@ export class BlockchainService {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
 
     // Set contract address if available
-    this.contractAddress = process.env.LAND_REGISTRY_CONTRACT_ADDRESS;
+    this.contractAddress = process.env.LAND_REGISTRY_CONTRACT_ADDRESS || "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
     console.log("🔗 Blockchain service initialized");
     console.log("📡 RPC URL:", rpcUrl);
     console.log("📋 Contract Address:", this.contractAddress || "Not set");
+
+    // Auto-initialize contract if address is available
+    if (this.contractAddress) {
+      this.initializeContract();
+    }
   }
 
   /**
@@ -40,10 +45,15 @@ export class BlockchainService {
           "function isPropertyForSale(uint256 landId) view returns (bool)",
           "function getPropertyPrice(uint256 landId) view returns (uint256)",
           "function setPropertyPrice(uint256 landId, uint256 priceInWei)",
+          "function purchaseProperty(uint256 landId) payable",
+          "function calculateTotalCost(uint256 landId) view returns (uint256 basePrice, uint256 taxAmount, uint256 totalCost)",
+          "function propertyTaxRate() view returns (uint256)",
+          "function setPropertyTaxRate(uint256 _taxRate)",
           "function registerLand(string ipfsHash, string location, uint256 area, string surveyNumber, uint256 priceInWei) returns (uint256)",
           "event LandRegistered(uint256 indexed landId, address indexed owner, string ipfsHash, string location)",
           "event PropertyPriceSet(uint256 indexed landId, address indexed owner, uint256 priceInWei)",
-          "event PropertyPriceUpdated(uint256 indexed landId, address indexed owner, uint256 oldPrice, uint256 newPrice)"
+          "event PropertyPriceUpdated(uint256 indexed landId, address indexed owner, uint256 oldPrice, uint256 newPrice)",
+          "event PropertyPurchased(uint256 indexed landId, address indexed previousOwner, address indexed newOwner, uint256 basePrice, uint256 taxAmount, uint256 totalCost)"
         ];
       }
 
@@ -201,6 +211,50 @@ export class BlockchainService {
         error instanceof Error ? error.message : "Unknown error"
       );
       return false;
+    }
+  }
+
+  /**
+   * Purchase property with ETH
+   */
+  async purchaseProperty(
+    landId: number,
+    priceInWei: string,
+    privateKey: string
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      if (!this.contract) {
+        console.warn("⚠️ Contract not initialized");
+        return { success: false, error: "Contract not initialized" };
+      }
+
+      console.log("🛒 Purchasing property:", landId, "for", priceInWei, "wei");
+      
+      // Create wallet from private key
+      const wallet = new ethers.Wallet(privateKey, this.provider);
+      
+      // Connect contract with wallet for transactions
+      const contractWithSigner = this.contract.connect(wallet);
+      
+      // Send purchase transaction with ETH payment
+      const tx = await (contractWithSigner as any).purchaseProperty(landId, {
+        value: priceInWei
+      });
+      
+      console.log("📝 Purchase transaction sent:", tx.hash);
+      
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      
+      console.log("✅ Purchase transaction confirmed in block:", receipt.blockNumber);
+      
+      return { success: true, txHash: tx.hash };
+    } catch (error) {
+      console.error("❌ Failed to purchase property:", error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
     }
   }
 

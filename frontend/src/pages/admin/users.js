@@ -27,7 +27,7 @@ export default function UsersManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
       const response = await fetch(`${API_BASE_URL}/auth/admin/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -52,7 +52,7 @@ export default function UsersManagement() {
 
   const handleViewDocument = async (userId, documentType) => {
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
       
       // Fetch the user's document IPFS hash
       const response = await fetch(`${API_BASE_URL}/auth/admin/user-documents/${userId}`, {

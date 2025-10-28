@@ -36,7 +36,7 @@ export default function TestAdmin() {
       setLoading(true);
       setTestResult('Testing admin access...');
 
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
       const response = await fetch(`${API_BASE_URL}/auth/admin/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,

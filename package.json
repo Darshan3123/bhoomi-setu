@@ -1,27 +1,30 @@
 {
   "name": "bhoomi-setu",
   "version": "1.0.0",
-  "description": "Blockchain-based Land Registry System",
-  "main": "index.js",
+  "description": "Blockchain-powered land registry system",
   "scripts": {
-    "dev": "node scripts/start-dev.js",
-    "dev:contracts": "cd contracts && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build": "npm run build:contracts && npm run build:backend && npm run build:frontend",
-    "build:contracts": "cd contracts && npm run build",
-    "build:backend": "cd backend && npm run build",
-    "build:frontend": "cd frontend && npm run build",
-    "test": "npm run test:contracts && npm run test:backend && npm run test:frontend",
-    "test:contracts": "cd contracts && npm run test",
-    "test:backend": "cd backend && npm run test",
-    "test:frontend": "cd frontend && npm run test",
-    "setup": "npm install && cd contracts && npm install && cd ../backend && npm install && cd ../frontend && npm install"
+    "dev": "concurrently --kill-others-on-fail \"npm run blockchain\" \"npm run backend\" \"npm run frontend\"",
+    "dev:full": "concurrently --kill-others-on-fail \"npm run blockchain\" \"npm run deploy\" \"npm run backend\" \"npm run frontend\"",
+    "blockchain": "cd contracts && npm run dev",
+    "deploy": "timeout /t 10 /nobreak >nul && cd contracts && npm run deploy:local",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../contracts && npm install",
+    "build": "cd contracts && npm run build && cd ../backend && npm run build && cd ../frontend && npm run build",
+    "start": "concurrently \"npm run backend:start\" \"npm run frontend:start\"",
+    "backend:start": "cd backend && npm start",
+    "frontend:start": "cd frontend && npm start"
   },
-  "keywords": ["blockchain", "land-registry", "ethereum", "ipfs", "web3"],
-  "author": "Bhoomi Setu Team",
-  "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
-  }
+  },
+  "keywords": [
+    "blockchain",
+    "land-registry",
+    "ethereum",
+    "nextjs",
+    "nodejs"
+  ],
+  "author": "Bhoomi Setu Team",
+  "license": "MIT"
 }

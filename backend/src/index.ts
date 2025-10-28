@@ -88,6 +88,7 @@ import inspectorRoutes from "./routes/inspector";
 import unifiedPropertiesRoutes from "./routes/unified-properties";
 import blockchainRoutes from "./routes/blockchain";
 import eventsRoutes from "./routes/events";
+import certificatesRoutes from "./routes/certificates";
 
 // API routes
 app.use("/api/auth", authRoutes);
@@ -100,6 +101,7 @@ app.use("/api/kyc", kycRoutes);
 app.use("/api/inspector", inspectorRoutes);
 app.use("/api/blockchain", blockchainRoutes);
 app.use("/api/events", eventsRoutes);
+app.use("/api/certificates", certificatesRoutes);
 
 // Error handling middleware
 app.use(

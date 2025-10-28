@@ -9,7 +9,7 @@ export default function DocumentViewer({ userId, userName, onClose }) {
   const [selectedDoc, setSelectedDoc] = useState(null);
 
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api";
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api";
 
   useEffect(() => {
     if (userId) {

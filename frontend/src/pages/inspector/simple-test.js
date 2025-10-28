@@ -44,7 +44,7 @@ export default function SimpleTest() {
         <div className="mb-4">
           <p><strong>Authenticated:</strong> {isAuthenticated ? 'Yes' : 'No'}</p>
           <p><strong>User Role:</strong> {user?.role || 'None'}</p>
-          <p><strong>API Base:</strong> {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}</p>
+          <p><strong>API Base:</strong> {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api'}</p>
         </div>
 
         <div className="space-x-4 mb-4">

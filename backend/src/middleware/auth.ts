@@ -53,108 +53,61 @@ export const verifyWalletSignature = (
   try {
     console.log("🔍 Signature verification debug:");
     console.log("Message:", JSON.stringify(message));
-    console.log("Message length:", message.length);
     console.log("Signature:", signature);
     console.log("Expected address:", expectedAddress);
 
-    // Normalize the expected address
+    // Normalize addresses for comparison
     const normalizedExpectedAddress = expectedAddress.toLowerCase();
 
-    // Method 1: Direct ethers.js verification
+    // Method 1: Standard ethers.js verification (most common)
     try {
       const recoveredAddress = ethers.verifyMessage(message, signature);
-      console.log("Method 1 - Recovered address (direct):", recoveredAddress);
+      console.log("Method 1 - Recovered address:", recoveredAddress);
 
       if (recoveredAddress.toLowerCase() === normalizedExpectedAddress) {
-        console.log("✅ Method 1 - Direct verification successful");
+        console.log("✅ Signature verification successful");
         return true;
       }
-    } catch (directError) {
-      console.log("❌ Method 1 - Direct verification failed:", directError instanceof Error ? directError.message : String(directError));
+    } catch (error) {
+      console.log("❌ Method 1 failed:", error instanceof Error ? error.message : String(error));
     }
 
-    // Method 2: Try with different message encodings
+    // Method 2: Try with different message formats (MetaMask compatibility)
     const messageVariations = [
-      message.replace(/\r\n/g, "\n"), // Normalize line endings to Unix
-      message.replace(/\n/g, "\r\n"), // Try Windows line endings  
-      message.trim(), // Remove leading/trailing whitespace
-      message.replace(/\s+/g, " "), // Normalize multiple spaces
-      message.replace(/\r\n/g, "\n").trim(), // Normalize and trim
+      message.replace(/\r\n/g, "\n"), // Normalize line endings
+      message.trim(), // Remove whitespace
+      message.replace(/\s+/g, " "), // Normalize spaces
     ];
 
     for (let i = 0; i < messageVariations.length; i++) {
-      const msgVariation = messageVariations[i];
       try {
-        const recoveredAddress = ethers.verifyMessage(msgVariation, signature);
-        console.log(`Method 2.${i + 1} - Trying variation: ${JSON.stringify(msgVariation)}`);
+        const recoveredAddress = ethers.verifyMessage(messageVariations[i], signature);
         console.log(`Method 2.${i + 1} - Recovered address:`, recoveredAddress);
 
         if (recoveredAddress.toLowerCase() === normalizedExpectedAddress) {
-          console.log(`✅ Method 2.${i + 1} - Verification successful with variation`);
+          console.log(`✅ Signature verification successful with variation ${i + 1}`);
           return true;
         }
-      } catch (variationError) {
-        console.log(`❌ Method 2.${i + 1} - Variation failed:`, variationError instanceof Error ? variationError.message : String(variationError));
+      } catch (error) {
+        console.log(`❌ Method 2.${i + 1} failed:`, error instanceof Error ? error.message : String(error));
       }
     }
 
-    // Method 3: Manual hash and recover
+    // Method 3: Manual verification with proper message hashing
     try {
-      console.log("🔍 Method 3 - Trying manual hash verification...");
       const messageHash = ethers.hashMessage(message);
-      console.log("Method 3 - Message hash:", messageHash);
-      
       const recoveredAddress = ethers.recoverAddress(messageHash, signature);
       console.log("Method 3 - Recovered address (manual):", recoveredAddress);
       
       if (recoveredAddress.toLowerCase() === normalizedExpectedAddress) {
-        console.log("✅ Method 3 - Manual verification successful");
+        console.log("✅ Manual signature verification successful");
         return true;
       }
-    } catch (manualError) {
-      console.log("❌ Method 3 - Manual verification failed:", manualError instanceof Error ? manualError.message : String(manualError));
-    }
-
-    // Method 4: Try with Buffer conversion (for different encoding issues)
-    try {
-      console.log("🔍 Method 4 - Trying with Buffer conversion...");
-      const messageBuffer = Buffer.from(message, 'utf8');
-      const messageFromBuffer = messageBuffer.toString('utf8');
-      
-      const recoveredAddress = ethers.verifyMessage(messageFromBuffer, signature);
-      console.log("Method 4 - Recovered address (buffer):", recoveredAddress);
-      
-      if (recoveredAddress.toLowerCase() === normalizedExpectedAddress) {
-        console.log("✅ Method 4 - Buffer verification successful");
-        return true;
-      }
-    } catch (bufferError) {
-      console.log("❌ Method 4 - Buffer verification failed:", bufferError instanceof Error ? bufferError.message : String(bufferError));
-    }
-
-    // Method 5: Try with personal_sign format (some wallets use this)
-    try {
-      console.log("🔍 Method 5 - Trying personal_sign format...");
-      // Some wallets prefix with "\x19Ethereum Signed Message:\n" + message.length + message
-      const personalMessage = `\x19Ethereum Signed Message:\n${message.length}${message}`;
-      const personalHash = ethers.keccak256(ethers.toUtf8Bytes(personalMessage));
-      const recoveredAddress = ethers.recoverAddress(personalHash, signature);
-      console.log("Method 5 - Recovered address (personal):", recoveredAddress);
-      
-      if (recoveredAddress.toLowerCase() === normalizedExpectedAddress) {
-        console.log("✅ Method 5 - Personal sign verification successful");
-        return true;
-      }
-    } catch (personalError) {
-      console.log("❌ Method 5 - Personal sign verification failed:", personalError instanceof Error ? personalError.message : String(personalError));
+    } catch (error) {
+      console.log("❌ Method 3 failed:", error instanceof Error ? error.message : String(error));
     }
 
     console.log("❌ All verification methods failed");
-    console.log("🔍 Final debug info:");
-    console.log("- Message bytes:", Array.from(new TextEncoder().encode(message)));
-    console.log("- Signature length:", signature.length);
-    console.log("- Expected address checksum:", ethers.getAddress(expectedAddress));
-    
     return false;
   } catch (error) {
     console.error("Signature verification error:", error);
